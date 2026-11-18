@@ -1,0 +1,155 @@
+
+# ============================================================
+# DOCKER COMPOSE CONFIGURATION
+# Project: Payments Backend Infrastructure
+#
+# This file starts three backend services:
+# 1. PostgreSQL - Database
+# 2. Redis      - Cache / In-memory data store
+# 3. NATS       - Messaging system
+# ============================================================
+
+
+# SERVICES
+# This section defines all the containers Docker should run.
+services:
+
+
+  # ==========================================================
+  # SERVICE 01: POSTGRESQL DATABASE
+  # ==========================================================
+
+  postgres:
+
+    # Docker image used to create the PostgreSQL container.
+    # postgres = Official PostgreSQL image.
+    # 17       = PostgreSQL version 17.
+    # alpine   = Lightweight Linux-based image.
+    image: postgres:17-alpine
+
+
+    # Custom name assigned to the PostgreSQL container.
+    # You can use this name to identify the container in Docker.
+    container_name: payments-postgres
+
+
+    # Environment variables configure the initial PostgreSQL database.
+    environment:
+
+      # Initial database administrator username.
+      POSTGRES_USER: payments
+
+      # Initial database administrator password.
+      POSTGRES_PASSWORD: payments
+
+      # Database automatically created during first initialization.
+      POSTGRES_DB: payments
+
+
+    # Port mapping:
+    # Computer port 5432 -> Container port 5432.
+    #
+    # PostgreSQL default port is 5432.
+    # Your backend can connect using localhost:5432.
+    ports:
+      - "5432:5432"
+
+
+    # Persistent storage for PostgreSQL.
+    #
+    # pgdata = Named Docker volume.
+    # The second path is where PostgreSQL stores database files
+    # inside its container.
+    #
+    # This helps preserve database data when containers restart.
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+
+    # Healthcheck checks whether PostgreSQL is ready.
+    healthcheck:
+
+      # pg_isready checks whether PostgreSQL accepts connections.
+      # -U payments specifies the database username.
+      test: ["CMD-SHELL", "pg_isready -U payments"]
+
+      # Docker performs the healthcheck every 10 seconds.
+      interval: 10s
+
+      # Each healthcheck command gets 3 seconds to complete.
+      timeout: 3s
+
+      # Docker retries the healthcheck up to 10 times.
+      retries: 10
+
+
+  # ==========================================================
+  # SERVICE 02: REDIS
+  # ==========================================================
+
+  redis:
+
+    # Official Redis Docker image.
+    # 7       = Redis version 7.
+    # alpine  = Lightweight Linux-based image.
+    image: redis:7-alpine
+
+
+    # Custom Redis container name.
+    container_name: payments-redis
+
+
+    # Port mapping:
+    # Computer port 6379 -> Container port 6379.
+    #
+    # Redis default port is 6379.
+    ports:
+      - "6379:6379"
+
+
+  # ==========================================================
+  # SERVICE 03: NATS MESSAGING SYSTEM
+  # ==========================================================
+
+  nats:
+
+    # Official NATS Docker image.
+    # 2.11 = NATS version 2.11.
+    # alpine = Lightweight Linux-based image.
+    image: nats:2.11-alpine
+
+
+
+    # Custom NATS container name.
+    container_name: payments-nats
+
+
+    # Additional startup arguments passed to NATS.
+    command: ["-js", "-n", "8222"]
+
+    # -js = Enables JetStream functionality.
+    # -n  = Sets the NATS server name to "8222".
+    #
+    # IMPORTANT:
+    # -n does NOT enable the monitoring HTTP port.
+    # Use -m 8222 if you want HTTP monitoring on port 8222.
+
+
+    # Port mappings:
+    #
+    # 4222 = NATS client communication port.
+    # 8222 = Intended HTTP monitoring port.
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+
+# ============================================================
+# DOCKER VOLUMES
+# ============================================================
+
+# Named volumes allow data to survive container removal.
+volumes:
+
+  # Persistent storage volume for PostgreSQL.
+  pgdata:
